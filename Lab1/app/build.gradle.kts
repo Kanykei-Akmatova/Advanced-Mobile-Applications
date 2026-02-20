@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.module1"
+    namespace = "com.example.lab1"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -12,7 +12,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.module1"
+        applicationId = "com.example.lab1"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

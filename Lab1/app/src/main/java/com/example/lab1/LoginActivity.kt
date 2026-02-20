@@ -1,4 +1,4 @@
-package com.example.module1
+package com.example.lab1
 
 import android.content.Intent
 import android.os.Bundle
@@ -22,7 +22,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.loginapp.ui.theme.LoginAppTheme
+import com.example.lab1.ui.theme.LoginAppTheme
 
 class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

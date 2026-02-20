@@ -1,4 +1,4 @@
-package com.example.loginapp.ui.theme
+package com.example.lab1.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme

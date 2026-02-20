@@ -1,4 +1,4 @@
-package com.example.module1
+package com.example.lab1
 
 /**
  * Singleton repository to store and retrieve user data across screens.
