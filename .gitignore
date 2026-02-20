@@ -1,0 +1,47 @@
+# ╔══════════════════════════════════════════════════════╗
+# ║           Android Studio / Kotlin .gitignore         ║
+# ╚══════════════════════════════════════════════════════╝
+
+# ─── Built outputs ────────────────────────────────────────
+/build/
+app/build/
+**/build/
+
+# ─── Gradle ───────────────────────────────────────────────
+.gradle/
+gradle-app.setting
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+local.properties
+
+# ─── Android Studio IDE ───────────────────────────────────
+.idea/
+*.iml
+*.iws
+*.ipr
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+
+# ─── Keystore / Secrets (NEVER commit these) ──────────────
+*.jks
+*.keystore
+keystore.properties
+google-services.json
+GoogleService-Info.plist
+
+# ─── Navigation / Generated ───────────────────────────────
+app/src/main/assets/databases/
+app/schemas/
+
+# ─── OS files ─────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ─── Logs / Reports ───────────────────────────────────────
+*.log
+lint/
+lint-results*
