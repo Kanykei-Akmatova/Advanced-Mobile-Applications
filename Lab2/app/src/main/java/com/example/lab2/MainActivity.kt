@@ -4,8 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,6 +14,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,7 +44,10 @@ class MainActivity : ComponentActivity() {
                     composable("chat") {
                         ChatScreen(
                             viewModel = viewModel,
-                            onMessageClick = { messageId ->
+                            onMessageClick = { message ->
+                                viewModel.onMessageSelected(message)
+                            },
+                            onMessageLongClick = { messageId ->
                                 navController.navigate("detail/$messageId")
                             }
                         )
@@ -52,7 +57,14 @@ class MainActivity : ComponentActivity() {
                         val messages by viewModel.messages.collectAsState()
                         val message = messages.find { it.id == messageId }
                         if (message != null) {
-                            DetailScreen(message = message, navController = navController)
+                            DetailScreen(
+                                message = message,
+                                navController = navController,
+                                onDelete = {
+                                    viewModel.deleteMessage(message)
+                                    navController.popBackStack()
+                                }
+                            )
                         }
                     }
                 }
@@ -67,11 +79,20 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel,
-    onMessageClick: (Int) -> Unit
+    onMessageClick: (Message) -> Unit,
+    onMessageLongClick: (Int) -> Unit
 ) {
     val messages by viewModel.messages.collectAsState()
+    val editingMessage by viewModel.editingMessage.collectAsState()
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+
+    // Update inputText when editingMessage changes
+    LaunchedEffect(editingMessage) {
+        if (editingMessage != null) {
+            inputText = editingMessage!!.text
+        }
+    }
 
     // Auto-scroll to bottom when new message arrives
     LaunchedEffect(messages.size) {
@@ -95,9 +116,26 @@ fun ChatScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                        .navigationBarsPadding() // Ensures spacing for system nav bar
+                        .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 24.dp), // Increased bottom padding
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    if (editingMessage != null) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Editing message...", fontSize = 12.sp, color = Color.Gray)
+                            TextButton(onClick = { 
+                                viewModel.clearEditing()
+                                inputText = ""
+                            }) {
+                                Text("Cancel")
+                            }
+                        }
+                    }
+
                     // Message input field
                     TextField(
                         value = inputText,
@@ -115,47 +153,65 @@ fun ChatScreen(
                         singleLine = false
                     )
 
-                    // Send & Receive buttons side by side
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                    // Send & Receive buttons OR Update button
+                    if (editingMessage != null) {
                         Button(
                             onClick = {
-                                viewModel.sendMessage(inputText, MessageType.SEND)
+                                viewModel.saveMessage(inputText, editingMessage!!.type)
                                 inputText = ""
                             },
                             enabled = inputText.isNotBlank(),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF1976D2),
+                                containerColor = if (editingMessage!!.type == MessageType.SEND) Color(0xFF1976D2) else Color(0xFF388E3C),
                                 disabledContainerColor = Color(0xFFB0BEC5)
                             ),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
-                                .weight(1f)
+                                .fillMaxWidth()
                                 .height(48.dp)
                         ) {
-                            Text("Send", fontWeight = FontWeight.SemiBold, fontSize = 20.sp)
+                            Text("Update Message", fontWeight = FontWeight.SemiBold, fontSize = 20.sp)
                         }
-
-                        Button(
-                            onClick = {
-                                viewModel.sendMessage(inputText, MessageType.RECEIVE)
-                                inputText = ""
-                            },
-                            enabled = inputText.isNotBlank(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF388E3C),
-                                disabledContainerColor = Color(0xFFB0BEC5)
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp)
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("Receive", fontWeight = FontWeight.SemiBold, fontSize = 20.sp)
+                            Button(
+                                onClick = {
+                                    viewModel.saveMessage(inputText, MessageType.SEND)
+                                    inputText = ""
+                                },
+                                enabled = inputText.isNotBlank(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF1976D2),
+                                    disabledContainerColor = Color(0xFFB0BEC5)
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp)
+                            ) {
+                                Text("Send", fontWeight = FontWeight.SemiBold, fontSize = 20.sp)
+                            }
+
+                            Button(
+                                onClick = {
+                                    viewModel.saveMessage(inputText, MessageType.RECEIVE)
+                                    inputText = ""
+                                },
+                                enabled = inputText.isNotBlank(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF388E3C),
+                                    disabledContainerColor = Color(0xFFB0BEC5)
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp)
+                            ) {
+                                Text("Receive", fontWeight = FontWeight.SemiBold, fontSize = 20.sp)
+                            }
                         }
                     }
                 }
@@ -188,7 +244,8 @@ fun ChatScreen(
                 items(messages) { message ->
                     MessageBubble(
                         message = message,
-                        onClick = { onMessageClick(message.id) }
+                        onClick = { onMessageClick(message) },
+                        onLongClick = { onMessageLongClick(message.id) }
                     )
                 }
             }
@@ -198,8 +255,9 @@ fun ChatScreen(
 
 // ─── Message Bubble ────────────────────────────────────────────────────────────
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MessageBubble(message: Message, onClick: () -> Unit) {
+fun MessageBubble(message: Message, onClick: () -> Unit, onLongClick: () -> Unit) {
     val isSend = message.type == MessageType.SEND
 
     Row(
@@ -230,7 +288,10 @@ fun MessageBubble(message: Message, onClick: () -> Unit) {
                         if (isSend) Color(0xFFBBDEFB)   // light blue for sent
                         else Color(0xFFC8E6C9)            // light green for received
                     )
-                    .clickable { onClick() }
+                    .combinedClickable(
+                        onClick = onClick,
+                        onLongClick = onLongClick
+                    )
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
                 Text(
@@ -247,7 +308,7 @@ fun MessageBubble(message: Message, onClick: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DetailScreen(message: Message, navController: NavHostController) {
+fun DetailScreen(message: Message, navController: NavHostController, onDelete: () -> Unit) {
     val isSend = message.type == MessageType.SEND
     val typeLabel = if (isSend) "Sent" else "Received"
     val accentColor = if (isSend) Color(0xFF1976D2) else Color(0xFF388E3C)
@@ -314,6 +375,22 @@ fun DetailScreen(message: Message, navController: NavHostController) {
                     Spacer(modifier = Modifier.height(8.dp))
                     DetailRow(label = "Message ID", value = "#${message.id}")
                 }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Delete Button at the bottom
+            Button(
+                onClick = onDelete,
+                modifier = Modifier.fillMaxWidth().height(56.dp).navigationBarsPadding(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(imageVector = Icons.Default.Delete, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Delete Message", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
